@@ -17,7 +17,7 @@ gem install asciidoc-merger
 require 'asciidoc-merger'
 
 asciidoc_parser = AsciiDocMerger::Parser.new
-asciidoc_parser.file = "/home/vince/Projects/dps_doc/sources/master/OAUTH_Howto/toc.txt"
+asciidoc_parser.file = "/path/to/my/file.asciidoc"
 asciidoc_parser.merge!
 ```
 
