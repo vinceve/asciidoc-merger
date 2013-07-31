@@ -4,10 +4,11 @@ require 'pry'
 module AsciiDocMerger
 
   STANDARD_IMAGE_PATH = "assets"
+  DEFAULT_MERGED_FILE_NAME = "merged_document.asciidoc"
 
   class Parser
 
-    attr_accessor :output, :file, :image_folder, :pwd
+    attr_accessor :output, :file, :image_folder, :pwd, :ignore_non_existing_images, :output_folder, :merged_file_name
 
     def initialize
       @pwd = Dir.pwd
@@ -15,7 +16,7 @@ module AsciiDocMerger
 
     def merge!
       parse_main_file!
-      @output
+      save!
     end
 
     private
@@ -63,10 +64,7 @@ module AsciiDocMerger
 
     def find_images(input)
       # inline images
-      binding.pry
-      images = input.to_enum(:scan, /image[:]{1}(.*)\[(.*)\]/).map { Regexp.last_match }
-      #image_block = input.to_enum(:scan, /image::(.*)\[(.*)\]/).map { Regexp.last_match }
-      images.concat image_block
+      images = input.to_enum(:scan, /image:(:)?(.*)\[(.*)\]/).map { Regexp.last_match }
       images
     end
 
@@ -77,12 +75,35 @@ module AsciiDocMerger
       FileUtils.mkdir_p(@image_folder)
       if remote_files.any?
         remote_files.each do |file|
-          basename = File.basename file[1]
+          basename = File.basename file[2]
           Dir.chdir(File.dirname(@file)) do
-            require 'pry'
-            binding.pry
-            FileUtils.cp( File.join(current_file_path, file[1]), File.join(@pwd, @image_folder, basename))
+            original_file_path = File.join(current_file_path, file[2])
+            destination_path = File.join(assets_path, basename)
+            copy_file! original_file_path, destination_path, current_file_path
           end
+        end
+      end
+    end
+
+    def assets_path
+      File.join(save_path, @image_folder)
+    end
+
+    def save_path
+      if @output_folder
+        @output_folder
+      else
+        @pwd
+      end
+    end
+
+    def copy_file!(source, destination, current_file_path)
+      basename = File.basename source
+      if File.exists? source
+        FileUtils.cp( source, destination)
+      else
+        if !@ignore_non_existing_images
+          raise IOError, "Could not find file: #{basename} in file: #{current_file_path}"
         end
       end
     end
@@ -99,6 +120,21 @@ module AsciiDocMerger
       Dir.chdir(File.dirname(@file)) do
         File.read(File.expand_path(relative_file_path))
       end
+    end
+
+    def get_file_name
+      if @merged_file_name
+        @merged_file_name
+      else
+        DEFAULT_MERGED_FILE_NAME
+      end
+    end
+
+    def save!
+      file = File.join(save_path, get_file_name)
+      merged_document = File.open( file, 'w' )
+      merged_document << @output
+      merged_document.close
     end
 
   end
