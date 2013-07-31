@@ -1,5 +1,5 @@
 require 'fileutils'
-require 'pry'
+require 'pathname'
 
 module AsciiDocMerger
 
@@ -59,7 +59,19 @@ module AsciiDocMerger
     end
 
     def replace_image_paths(images, input)
-      input
+
+      output = input
+
+      images.each do |match|
+        new_string = match[0]
+        basename = File.basename match[2]
+        new_string = new_string.gsub(match[2], File.join(relative_assets_path, basename))
+
+        output = output.gsub(match[0], new_string)
+
+      end
+
+      output
     end
 
     def find_images(input)
@@ -87,6 +99,10 @@ module AsciiDocMerger
 
     def assets_path
       File.join(save_path, @image_folder)
+    end
+
+    def relative_assets_path
+      Pathname.new(assets_path).relative_path_from(Pathname.new(save_path)).to_s
     end
 
     def save_path
